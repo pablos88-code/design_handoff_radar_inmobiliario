@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radar Inmobiliario · Galicia</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --primary: #12332e;
+        --primary-soft: #f5f4f1;
+        --accent: #c2572a;
+        --alquiler: #1e6fb8;
+        --border: #e2e0da;
+        --text: #222;
+        --muted: #777;
+        --surface: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; background: var(--primary-soft); font-family: 'Libre Franklin', sans-serif; }
+      body { overflow: hidden; }
+      button { font: inherit; }
+      .leaflet-container { font-family: 'Libre Franklin', sans-serif; }
+      .leaflet-control-attribution { font-size: 10px; }
+      .app-shell { height: 100vh; display: flex; flex-direction: column; background: var(--primary-soft); }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; background: var(--primary); color: var(--primary-soft); flex-wrap: wrap; z-index: 1000; }
+      .brand { display: flex; flex-direction: column; gap: 2px; }
+      .brand-title { font-size: 17px; font-weight: 800; letter-spacing: 0.02em; }
+      .brand-subtitle { font-size: 12px; opacity: 0.75; }
+      .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+      .filter-pill { border: 1px solid rgba(255,255,255,0.35); background: transparent; color: var(--primary-soft); padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s ease; }
+      .filter-pill.active { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
+      .count-pill { font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.12); padding: 7px 12px; border-radius: 8px; white-space: nowrap; }
+      .content { display: flex; flex: 1; min-height: 0; }
+      .map-panel { position: relative; flex: 1; min-height: 0; }
+      #map { height: 100%; width: 100%; }
+      .legend { position: absolute; top: 12px; right: 12px; z-index: 700; background: rgba(255,255,255,0.95); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; box-shadow: 0 2px 10px rgba(18,51,46,0.12); }
+      .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); margin: 4px 0; }
+      .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+      .toggle { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+      .toggle button { border: none; background: var(--primary-soft); padding: 6px 8px; border-radius: 999px; cursor: pointer; font-size: 12px; }
+      .radar { width: 320px; border-left: 1px solid var(--border); background: #fff; display: flex; flex-direction: column; min-height: 0; }
+      .radar-header { padding: 16px 16px 10px; border-bottom: 1px solid var(--border); }
+      .radar-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--primary); }
+      .radar-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 1.8s infinite; }
+      .radar-subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+      .radar-list { overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+      .radar-item { border: 1px solid #eceae4; border-radius: 12px; padding: 10px; background: #faf9f5; text-align: left; cursor: pointer; }
+      .radar-item.active { background: #f5efe9; border-color: #e7dfd0; }
+      .radar-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+      .radar-title-text { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+      .radar-address { font-size: 12px; color: var(--muted); }
+      .radar-price { font-size: 13px; font-weight: 800; color: var(--primary); }
+      .card { position: absolute; left: 16px; bottom: 16px; width: min(360px, calc(100% - 32px)); background: #fff; border-radius: 14px; box-shadow: 0 8px 32px rgba(18,51,46,0.28); overflow: hidden; z-index: 800; }
+      .card-image { position: relative; height: 170px; background-size: cover; background-position: center; }
+      .close-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border: none; border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff; cursor: pointer; }
+      .card-badge { position: absolute; left: 10px; bottom: 10px; padding: 7px 10px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+      .card-body { padding: 14px; }
+      .card-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+      .price { font-size: 22px; font-weight: 800; color: var(--primary); }
+      .specs { font-size: 12px; color: var(--muted); white-space: nowrap; }
+      .title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+      .address { font-size: 13px; color: #666; margin-bottom: 10px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+      .chip { font-size: 12px; font-weight: 600; background: #f0efe9; color: var(--text); padding: 6px 8px; border-radius: 999px; }
+      .external-link { display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: var(--text); background: #f0efe9; border-radius: 10px; padding: 10px 12px; }
+      .source-pill { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+      .source-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .7; } }
+      @media (max-width: 1024px) { body { overflow: auto; } .content { flex-direction: column; } .radar { width: 100%; max-height: 360px; border-left: none; border-top: 1px solid var(--border); } .card { bottom: 12px; } }
+      @media (max-width: 640px) { .topbar { padding: 12px 14px; } .toolbar { width: 100%; justify-content: flex-start; } .legend { top: 10px; right: 10px; } .card { left: 10px; bottom: 10px; width: calc(100% - 20px); } }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-title">Radar Inmobiliario · Galicia</div>
+          <div class="brand-subtitle">Mapa interactivo · detección de anuncios nuevos</div>
+        </div>
+        <div class="toolbar">
+          <div id="filters"></div>
+          <div class="count-pill" id="count-pill">0 propiedades</div>
+        </div>
+      </header>
+      <main class="content">
+        <section class="map-panel">
+          <div id="map"></div>
+          <div class="legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#12332e"></span> Venta</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#1e6fb8"></span> Alquiler</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#c2572a"></span> Sara Álvarez</div>
+            <label class="toggle"><button id="toggle-pins" type="button">Mostrar precio</button><span id="toggle-label">Pines con precio</span></label>
+          </div>
+          <div id="property-card"></div>
+        </section>
+        <aside id="radar" class="radar">
+          <div class="radar-header">
+            <div class="radar-title"><span class="radar-dot"></span> Radar de captación</div>
+            <div class="radar-subtitle">Anuncios de particulares recientes — para llamar y captar</div>
+          </div>
+          <div id="radar-list" class="radar-list"></div>
+        </aside>
+      </main>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

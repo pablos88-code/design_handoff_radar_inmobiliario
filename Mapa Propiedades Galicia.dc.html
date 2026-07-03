@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta charset="utf-8">
+  <title>Mapa de propiedades — Galicia</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    .leaflet-container { font-family: 'Libre Franklin', sans-serif; }
+    .price-pin { transition: transform 0.12s ease; }
+    .price-pin:hover { transform: scale(1.08); z-index: 1000 !important; }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</helmet>
+
+<div style="font-family: 'Libre Franklin', sans-serif; width: 100%; height: 100vh; display: flex; flex-direction: column; background: #f5f4f1; overflow: hidden;">
+
+  <!-- Cabecera -->
+  <header data-screen-label="Cabecera" style="display: flex; align-items: center; gap: 20px; padding: 12px 20px; background: #12332e; color: #f5f4f1; flex-wrap: wrap; z-index: 500;">
+    <div style="display: flex; flex-direction: column;">
+      <div style="font-weight: 800; font-size: 17px; letter-spacing: 0.02em;">Radar Inmobiliario · Galicia</div>
+      <div style="font-size: 12px; opacity: 0.75;">Prototipo — datos de ejemplo · Sara Álvarez Inmobiliaria</div>
+    </div>
+
+    <!-- Filtros por tipo -->
+    <div style="display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap;">
+      <sc-for list="{{ typeFilters }}" as="f" hint-placeholder-count="4">
+        <button onClick="{{ f.onClick }}" style="border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.color }}; padding: 7px 14px; border-radius: 999px; font-family: 'Libre Franklin', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;">{{ f.label }}</button>
+      </sc-for>
+    </div>
+
+    <div style="font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.12); padding: 7px 12px; border-radius: 8px;">{{ count }} propiedades</div>
+  </header>
+
+  <!-- Mapa + Radar -->
+  <div style="display: flex; flex: 1; min-height: 0;">
+  <div data-screen-label="Mapa" style="position: relative; flex: 1; min-height: 0;">
+    <div ref="{{ mapRef }}" style="position: absolute; inset: 0;"></div>
+
+    <!-- Leyenda -->
+    <div style="position: absolute; top: 14px; right: 14px; z-index: 800; background: rgba(255,255,255,0.95); border: 1px solid #e2e0da; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 10px rgba(18,51,46,0.12);">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #333;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #12332e;"></span> Venta</div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #333;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #1e6fb8;"></span> Alquiler</div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #333;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #c2572a;"></span> Sara Álvarez</div>
+    </div>
+
+    <!-- Ficha de propiedad seleccionada -->
+    <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Ficha propiedad" style="position: absolute; left: 16px; bottom: 16px; z-index: 900; width: 320px; max-width: calc(100% - 32px); background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(18,51,46,0.28); animation: cardIn 0.18s ease;">
+        <div style="position: relative;">
+          <div role="img" aria-label="Foto de la propiedad" style="width: 100%; height: 170px; background-color: #e6e4db; background-image: url('{{ sel.photo }}'); background-size: cover; background-position: center;"></div>
+          <button onClick="{{ closeCard }}" aria-label="Cerrar" style="position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(0,0,0,0.55); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+          <div style="position: absolute; left: 10px; bottom: 10px; background: {{ sel.typeColor }}; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">{{ sel.typeLabel }}</div>
+        </div>
+        <div style="padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+            <div style="font-size: 22px; font-weight: 800; color: #12332e;">{{ sel.priceLabel }}</div>
+            <div style="font-size: 12px; color: #777; white-space: nowrap;">{{ sel.specs }}</div>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #222; line-height: 1.35;">{{ sel.title }}</div>
+          <div style="font-size: 13px; color: #666;">{{ sel.address }}</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #12332e; background: #f0efe9; padding: 4px 10px; border-radius: 999px; white-space: nowrap;">🏠 {{ sel.ptype }}</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #12332e; background: #f0efe9; padding: 4px 10px; border-radius: 999px; white-space: nowrap;">🧭 Orientación: {{ sel.orient }}</span>
+          </div>
+          <a href="{{ sel.url }}" target="_blank" rel="noopener" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: #f0efe9; text-decoration: none; color: #12332e;" style-hover="background: #e6e4db;">
+            <span style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ sel.sourceColor }};"></span>
+              Ver en {{ sel.source }}
+            </span>
+            <span style="font-size: 14px;">→</span>
+          </a>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- Radar de captación -->
+  <aside data-screen-label="Radar de captación" style="width: 300px; flex-shrink: 0; background: #ffffff; border-left: 1px solid #e2e0da; display: flex; flex-direction: column; min-height: 0;">
+    <div style="padding: 14px 16px 10px; border-bottom: 1px solid #eeece6;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: #12332e;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #c2572a; box-shadow: 0 0 0 3px rgba(194,87,42,0.2);"></span>
+        Radar de captación
+      </div>
+      <div style="font-size: 12px; color: #888; margin-top: 3px;">Anuncios de particulares recientes — para llamar y captar</div>
+    </div>
+    <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+      <sc-for list="{{ radarItems }}" as="r" hint-placeholder-count="5">
+        <button onClick="{{ r.onClick }}" style="display: flex; flex-direction: column; gap: 4px; align-items: stretch; text-align: left; padding: 12px 16px; border: none; border-bottom: 1px solid #f2f0ea; background: {{ r.bg }}; cursor: pointer; font-family: 'Libre Franklin', sans-serif;" style-hover="background: #faf9f5;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 700; color: #c2572a; text-transform: uppercase; letter-spacing: 0.04em;">{{ r.when }}</span>
+            <span style="font-size: 11px; font-weight: 600; color: #999;">{{ r.source }}</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 600; color: #222; line-height: 1.3;">{{ r.title }}</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="font-size: 12px; color: #777;">{{ r.address }}</span>
+            <span style="font-size: 13px; font-weight: 800; color: #12332e; white-space: nowrap;">{{ r.priceLabel }}</span>
+          </div>
+        </button>
+      </sc-for>
+    </div>
+  </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;preciosEnPines&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Mapa&quot;}}">
+class Component extends DCLogic {
+  state = { type: 'todos', selId: null };
+
+  mapRef = React.createRef();
+
+  TYPE_META = {
+    venta:    { label: 'Venta',       color: '#12332e' },
+    alquiler: { label: 'Alquiler',    color: '#1e6fb8' },
+    agencia:  { label: 'Sara Álvarez', color: '#c2572a' },
+  };
+
+  SOURCE_COLORS = {
+    'Idealista': '#b8c400', 'Fotocasa': '#0046fe',
+    'Wallapop': '#13c1ac', 'Milanuncios': '#f0524c',
+    'Sara Álvarez Inmobiliaria': '#c2572a',
+    'Inmobiliaria Freire': '#7a2b3a',
+  };
+
+  // Inmuebles reales de Sara Álvarez Inmobiliaria (destacados de su web, con enlace real)
+  AGENCIA = [
+    { id: 101, type: 'agencia', price: 390000, lat: 42.5560, lng: -8.5850, title: 'Terreno con dos estupendas casas en Moraña', address: 'Moraña', specs: '5 hab · 2 baños · 400 m²', ptype: 'Casa + terreno', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Moraña/34313' },
+    { id: 102, type: 'agencia', price: 235000, lat: 42.4280, lng: -8.6410, title: 'Piso de 2 hab. con terraza, garaje y dos trasteros — zona Colegio Sagrado Corazón', address: 'Sagrado Corazón, Pontevedra', specs: '2 hab · 1 baño · 80 m²', ptype: 'Piso', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/piso/Pontevedra/Pontevedra/170811' },
+    { id: 103, type: 'agencia', price: 395000, lat: 42.4000, lng: -8.8070, title: 'Luminoso piso con terraza próximo a la playa de Silgar', address: 'Calle Progreso, Sanxenxo', specs: '2 hab · 2 baños · 125 m²', ptype: 'Piso', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/piso/Pontevedra/Sanxenxo/170385' },
+    { id: 104, type: 'agencia', price: 595000, lat: 42.4350, lng: -8.6150, title: 'Impresionante casa de piedra en Mourente, zona Liceo Casino Mercantil', address: 'Mourente, Pontevedra', specs: '4 hab · 4 baños · 369 m²', ptype: 'Casa', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Pontevedra/44159' },
+    { id: 105, type: 'agencia', price: 340000, lat: 42.3910, lng: -8.7020, title: 'Estupenda casa en entorno privilegiado con vistas al mar', address: 'Marín', specs: '4 hab · 2 baños · 160 m²', ptype: 'Casa', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Marín/37740' },
+    { id: 106, type: 'agencia', price: 430000, lat: 42.4400, lng: -8.6100, title: 'Terreno con proyecto de casa de diseño moderno de una planta', address: 'Mourente, Pontevedra', specs: '3 hab · 2 baños · 230 m²', ptype: 'Terreno + proyecto', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Pontevedra/33804' },
+  ];
+
+  // Generador determinista de propiedades de ejemplo (simula el volumen real de portales)
+  buildDemoData() {
+    const zones = [
+      { name: 'Vigo', lat: 42.2328, lng: -8.7226, n: 18, streets: ['Rúa do Príncipe', 'Gran Vía', 'Rúa Urzáiz', 'Bouzas', 'Casco Vello', 'Teis', 'Coia', 'Travesía de Vigo', 'As Travesas', 'O Calvario'] },
+      { name: 'Pontevedra', lat: 42.4318, lng: -8.6446, n: 22, spread: 0.011, streets: ['A Ferrería', 'Casco histórico', 'Rúa Benito Corbal', 'Rúa Michelena', 'Praza da Peregrina', 'Rúa da Oliva', 'Rúa Gutiérrez Mellado', 'Praza de Galicia', 'Rúa Sagasta', 'Alameda'] },
+      { name: 'Pontevedra', lat: 42.4310, lng: -8.6444, n: 12, streets: ['Campolongo', 'Monte Porreiro', 'A Parda', 'Mollavao', 'O Burgo', 'Lérez', 'Salcedo'] },
+      { name: 'A Caeira, Poio', lat: 42.4345, lng: -8.6585, n: 6, spread: 0.008, streets: ['A Caeira', 'Urbanización A Caeira', 'Camiño da Caeira'] },
+      { name: 'Marcón', lat: 42.4180, lng: -8.6050, n: 3, spread: 0.012, streets: ['Marcón', 'A Bouza', 'San Miguel'] },
+      { name: 'Bora', lat: 42.4370, lng: -8.5850, n: 3, spread: 0.012, streets: ['Bora', 'A Igrexa', 'O Pino'] },
+      { name: 'Xeve', lat: 42.4750, lng: -8.6150, n: 3, spread: 0.014, streets: ['Xeve', 'Santa María', 'A Devesa'] },
+      { name: 'Ponte Sampaio', lat: 42.3750, lng: -8.5670, n: 2, spread: 0.01, streets: ['Ponte Sampaio', 'O Souto'] },
+      { name: 'Barro', lat: 42.5050, lng: -8.6350, n: 2, spread: 0.014, streets: ['Barro', 'San Antoniño'] },
+      { name: 'Vilaboa', lat: 42.3500, lng: -8.6500, n: 2, spread: 0.014, streets: ['Vilaboa', 'O Toural'] },
+      { name: 'Sanxenxo', lat: 42.4790, lng: -8.8570, n: 8, streets: ['Calle Progreso', 'Praia de Silgar', 'Portonovo', 'Vilalonga', 'Adina'] },
+      { name: 'Marín', lat: 42.3910, lng: -8.7020, n: 6, streets: ['Cantodarea', 'O Sequelo', 'Praza de España', 'A Estrada Vella'] },
+      { name: 'Poio', lat: 42.4650, lng: -8.7270, n: 6, streets: ['Combarro', 'Campelo', 'San Salvador', 'A Seca'] },
+      { name: 'Nigrán', lat: 42.1720, lng: -8.6890, n: 5, streets: ['Praia América', 'Panxón', 'A Ramallosa'] },
+      { name: 'Baiona', lat: 42.1180, lng: -8.8455, n: 5, streets: ['O Burgo', 'Sabarís', 'Paseo do Pescador'] },
+      { name: 'Redondela', lat: 42.2540, lng: -8.6180, n: 4, streets: ['Chapela', 'O Casal', 'Rúa Alfonso XII'] },
+      { name: 'Cangas', lat: 42.2640, lng: -8.7840, n: 4, streets: ['O Hío', 'Aldán', 'Rúa Real'] },
+      { name: 'Bueu', lat: 42.3240, lng: -8.7850, n: 5, spread: 0.012, streets: ['Rúa Montero Ríos', 'Rúa Eduardo Vincenti', 'A Banda do Río', 'As Lagoas', 'Praia de Agrelo'] },
+      { name: 'Beluso', lat: 42.3300, lng: -8.8150, n: 3, spread: 0.012, streets: ['Beluso', 'Bon', 'Praia de Lagos'] },
+      { name: 'Cela, Bueu', lat: 42.3180, lng: -8.7620, n: 3, spread: 0.012, streets: ['Cela', 'A Portela', 'O Valado'] },
+      { name: 'Vilagarcía de Arousa', lat: 42.5940, lng: -8.7650, n: 4, streets: ['A Baldosa', 'Carril', 'Rúa Castelao'] },
+      { name: 'Santiago de Compostela', lat: 42.8782, lng: -8.5449, n: 3, streets: ['A Alameda', 'San Pedro', 'Ensanche'] },
+      { name: 'A Coruña', lat: 43.3623, lng: -8.4115, n: 3, streets: ['Juan Flórez', 'Riazor', 'Os Mallos'] },
+      { name: 'Ourense', lat: 42.3406, lng: -7.8639, n: 3, streets: ['As Burgas', 'O Couto', 'Rúa do Paseo'] },
+    ];
+    const ptypes = ['Piso', 'Piso', 'Piso', 'Apartamento', 'Casa', 'Chalet', 'Adosado', 'Ático', 'Estudio'];
+    const orients = ['Sur', 'Norte', 'Este', 'Oeste', 'Sureste', 'Suroeste', 'Noreste'];
+    const sources = [
+      { name: 'Idealista', url: 'https://www.idealista.com' },
+      { name: 'Idealista', url: 'https://www.idealista.com' },
+      { name: 'Fotocasa', url: 'https://www.fotocasa.es' },
+      { name: 'Wallapop', url: 'https://es.wallapop.com' },
+      { name: 'Milanuncios', url: 'https://www.milanuncios.com' },
+    ];
+    const adjs = ['Luminoso', 'Reformado', 'Amplio', 'Céntrico', 'Acogedor', 'Exterior', 'Con terraza', 'Con garaje', 'Para entrar a vivir', 'Con vistas'];
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const out = [];
+    let id = 1000;
+    zones.forEach(z => {
+      for (let i = 0; i < z.n; i++) {
+        const rent = rnd() < 0.3;
+        const ptype = ptypes[Math.floor(rnd() * ptypes.length)];
+        const hab = ptype === 'Estudio' ? 1 : 1 + Math.floor(rnd() * 4);
+        const m2 = 45 + Math.floor(rnd() * 180);
+        const price = rent ? 450 + Math.floor(rnd() * 14) * 50 : 90000 + Math.floor(rnd() * 90) * 5000;
+        const src = sources[Math.floor(rnd() * sources.length)];
+        const street = z.streets[Math.floor(rnd() * z.streets.length)];
+        const adj = adjs[Math.floor(rnd() * adjs.length)];
+        out.push({
+          owner: rnd() < 0.35 ? 'Particular' : 'Agencia',
+          daysAgo: Math.floor(rnd() * 14),
+          id: ++id,
+          type: rent ? 'alquiler' : 'venta',
+          price,
+          lat: z.lat + (rnd() - 0.5) * (z.spread ?? 0.045),
+          lng: z.lng + (rnd() - 0.5) * ((z.spread ?? 0.045) * 1.33),
+          title: adj + ' ' + ptype.toLowerCase() + ' de ' + hab + (hab === 1 ? ' habitación' : ' habitaciones'),
+          address: street + ', ' + z.name,
+          specs: hab + ' hab · ' + m2 + ' m²',
+          ptype,
+          orient: orients[Math.floor(rnd() * orients.length)],
+          source: src.name,
+          url: src.url,
+        });
+      }
+    });
+    return out;
+  }
+
+  // Anuncios reales de Inmobiliaria Freire (Bueu) — precios no publicados: "Consultar"
+  FREIRE = [
+    { id: 201, type: 'venta', price: null, lat: 42.3110, lng: -8.7880, title: 'Casa rústica de piedra en la aldea de Meiro', address: 'Meiro, Bueu', specs: 'Entorno natural · piedra', ptype: 'Casa rústica', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 202, type: 'venta', price: null, lat: 42.3050, lng: -8.7750, title: 'Vivienda tradicional gallega para reformar en A Graña', address: 'A Graña, Bueu', specs: '118 m² · parcela 712 m²', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 203, type: 'venta', price: null, lat: 42.3180, lng: -8.7950, title: 'Conjunto de seis cabañas equipadas — uso turístico', address: 'As Meanes, Bueu', specs: '6 cabañas · cerca de playa', ptype: 'Cabañas', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 204, type: 'venta', price: null, lat: 42.3240, lng: -8.7850, title: 'Casa con terreno en el centro de Bueu, 2 plantas + bajo cubierta', address: 'Centro, Bueu', specs: '3 hab · garaje', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 205, type: 'venta', price: null, lat: 42.3210, lng: -8.8220, title: 'Finca de 12.900 m² con casa para reformar y hórreo — parcelable', address: 'Montemogos, Beluso', specs: '12.900 m² · a 1 km de playas', ptype: 'Finca + casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 206, type: 'venta', price: null, lat: 42.3390, lng: -8.8270, title: 'Casa para restaurar en Bon de Abaixo', address: 'Bon de Abaixo, Beluso', specs: '2 hab · salita · cocina', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+    { id: 207, type: 'venta', price: null, lat: 42.3265, lng: -8.7835, title: 'Casa de 3 plantas en la Banda do Río', address: 'Banda do Río, Bueu', specs: '3 hab · bodega · terraza', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com' },
+  ];
+
+  DATA = [...this.AGENCIA, ...this.FREIRE, ...this.buildDemoData()];
+
+  fmtPrice(p) {
+    if (p.price == null) return 'Consultar';
+    if (p.type === 'alquiler') return p.price + ' €/mes';
+    return p.price.toLocaleString('es-ES') + ' €';
+  }
+
+  filtered() {
+    return this.state.type === 'todos' ? this.DATA : this.DATA.filter(p => p.type === this.state.type);
+  }
+
+  componentDidMount() {
+    this.initMap();
+  }
+
+  initMap() {
+    if (this.map || !this.mapRef.current || typeof L === 'undefined') {
+      if (typeof L === 'undefined') setTimeout(() => this.initMap(), 200);
+      return;
+    }
+    this.map = L.map(this.mapRef.current, { zoomControl: true }).setView([42.4318, -8.6446], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19,
+    }).addTo(this.map);
+    this.markerLayer = L.layerGroup().addTo(this.map);
+    this.renderMarkers();
+  }
+
+  renderMarkers() {
+    if (!this.markerLayer) return;
+    this.markerLayer.clearLayers();
+    const showPrices = this.props.preciosEnPines ?? true;
+    this.filtered().forEach(p => {
+      const color = this.TYPE_META[p.type].color;
+      const sel = this.state.selId === p.id;
+      const html = showPrices
+        ? '<div class="price-pin" style="background:' + (sel ? '#111' : color) + ';color:#fff;font-family:Libre Franklin,sans-serif;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">' + this.fmtPrice(p) + '</div>'
+        : '<div class="price-pin" style="width:16px;height:16px;border-radius:50%;background:' + (sel ? '#111' : color) + ';border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>';
+      const icon = L.divIcon({ html, className: '', iconSize: null, iconAnchor: showPrices ? [35, 13] : [11, 11] });
+      const m = L.marker([p.lat, p.lng], { icon });
+      m.on('click', () => {
+        this.setState({ selId: p.id });
+        this.map.panTo([p.lat, p.lng], { animate: true });
+      });
+      this.markerLayer.addLayer(m);
+    });
+  }
+
+  componentDidUpdate() {
+    if (this.map) this.map.invalidateSize();
+    this.renderMarkers();
+  }
+
+  renderVals() {
+    const types = [
+      { key: 'todos', label: 'Todos' },
+      { key: 'venta', label: 'Venta' },
+      { key: 'alquiler', label: 'Alquiler' },
+      { key: 'agencia', label: 'Sara Álvarez' },
+    ];
+    const typeFilters = types.map(t => {
+      const active = this.state.type === t.key;
+      return {
+        label: t.label,
+        bg: active ? '#f5f4f1' : 'transparent',
+        color: active ? '#12332e' : '#f5f4f1',
+        border: active ? '#f5f4f1' : 'rgba(255,255,255,0.35)',
+        onClick: () => this.setState({ type: t.key, selId: null }),
+      };
+    });
+
+    const raw = this.DATA.find(p => p.id === this.state.selId);
+    let sel = null;
+    if (raw) {
+      sel = {
+        ...raw,
+        photo: 'https://picsum.photos/seed/galicia' + raw.id + '/640/400',
+        priceLabel: this.fmtPrice(raw),
+        typeLabel: this.TYPE_META[raw.type].label,
+        typeColor: this.TYPE_META[raw.type].color,
+        sourceColor: this.SOURCE_COLORS[raw.source] || '#888',
+      };
+    }
+
+    const radarItems = this.DATA
+      .filter(p => p.owner === 'Particular')
+      .sort((a, b) => a.daysAgo - b.daysAgo)
+      .slice(0, 15)
+      .map(p => ({
+        title: p.title,
+        address: p.address,
+        source: p.source,
+        priceLabel: this.fmtPrice(p),
+        when: p.daysAgo === 0 ? 'Nuevo hoy' : p.daysAgo === 1 ? 'Ayer' : 'Hace ' + p.daysAgo + ' días',
+        bg: this.state.selId === p.id ? '#f5efe9' : '#ffffff',
+        onClick: () => {
+          this.setState({ selId: p.id });
+          if (this.map) this.map.setView([p.lat, p.lng], 13, { animate: true });
+        },
+      }));
+
+    return {
+      radarItems,
+      typeFilters,
+      count: this.filtered().length,
+      mapRef: this.mapRef,
+      hasSel: !!sel,
+      sel,
+      closeCard: () => this.setState({ selId: null }),
+    };
+  }
+}
+</script>
+</body>
+</html>

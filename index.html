@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radar Inmobiliario · Galicia</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #12332e;
+        --primary-soft: #f5f4f1;
+        --accent: #c2572a;
+        --alquiler: #1e6fb8;
+        --border: #e2e0da;
+        --text: #222;
+        --muted: #777;
+        --surface: #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; background: var(--primary-soft); font-family: 'Libre Franklin', sans-serif; }
+      body { overflow: hidden; }
+      button { font: inherit; }
+      .leaflet-container { font-family: 'Libre Franklin', sans-serif; }
+      .leaflet-control-attribution { font-size: 10px; }
+
+      .app-shell {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--primary-soft);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 20px;
+        background: var(--primary);
+        color: var(--primary-soft);
+        flex-wrap: wrap;
+        z-index: 1000;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .brand-title {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-subtitle {
+        font-size: 12px;
+        opacity: 0.75;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+
+      .filter-pill {
+        border: 1px solid rgba(255,255,255,0.35);
+        background: transparent;
+        color: var(--primary-soft);
+        padding: 7px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.15s ease;
+      }
+
+      .filter-pill.active {
+        background: var(--primary-soft);
+        color: var(--primary);
+        border-color: var(--primary-soft);
+      }
+
+      .count-pill {
+        font-size: 13px;
+        font-weight: 600;
+        background: rgba(255,255,255,0.12);
+        padding: 7px 12px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+
+      .vigilante-btn {
+        border: 1px solid rgba(255,255,255,0.35);
+        background: #c2572a;
+        color: #fff;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .vigilante-btn:disabled {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .status-note {
+        font-size: 12px;
+        color: #666;
+        margin-top: 6px;
+      }
+
+      .content {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .map-panel {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+      }
+
+      #map {
+        position: absolute;
+        inset: 0;
+      }
+
+      .legend {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 900;
+        background: rgba(255,255,255,0.95);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        box-shadow: 0 2px 10px rgba(18, 51, 46, 0.12);
+      }
+
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .toggle {
+        margin-top: 2px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+        cursor: pointer;
+      }
+
+      .toggle button {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 999px;
+        padding: 6px 10px;
+        cursor: pointer;
+        color: var(--primary);
+      }
+
+      .card {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        z-index: 1000;
+        width: min(320px, calc(100% - 32px));
+        background: var(--surface);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(18, 51, 46, 0.28);
+        animation: cardIn 0.18s ease;
+      }
+
+      .card-image {
+        position: relative;
+        height: 170px;
+        background: #e6e4db;
+        background-size: cover;
+        background-position: center;
+      }
+
+      .card-badge {
+        position: absolute;
+        left: 10px;
+        bottom: 10px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 4px 10px;
+        border-radius: 999px;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.55);
+        color: #fff;
+        font-size: 15px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card-body {
+        padding: 14px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .card-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .price {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary);
+      }
+
+      .specs {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.35;
+      }
+
+      .address {
+        font-size: 13px;
+        color: #666;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 2px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--primary);
+        background: #f0efe9;
+        padding: 4px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+
+      .external-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 4px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #f0efe9;
+        text-decoration: none;
+        color: var(--primary);
+      }
+
+      .external-link:hover { background: #e6e4db; }
+
+      .source-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .source-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .radar {
+        width: 300px;
+        flex-shrink: 0;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .radar-header {
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid #eeece6;
+      }
+
+      .radar-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--primary);
+      }
+
+      .radar-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 3px rgba(194, 87, 42, 0.2);
+      }
+
+      .radar-subtitle {
+        font-size: 12px;
+        color: #888;
+        margin-top: 3px;
+      }
+
+      .radar-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .radar-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: stretch;
+        text-align: left;
+        padding: 12px 16px;
+        border: none;
+        border-bottom: 1px solid #f2f0ea;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .radar-item:hover { background: #faf9f5; }
+      .radar-item.active { background: #f5efe9; }
+
+      .radar-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .radar-when {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .radar-source {
+        font-size: 11px;
+        font-weight: 600;
+        color: #999;
+      }
+
+      .radar-title-text {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.3;
+      }
+
+      .radar-address {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .radar-price {
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--primary);
+        white-space: nowrap;
+      }
+
+      .price-pin {
+        transition: transform 0.12s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        border: 2px solid #fff;
+        line-height: 1;
+      }
+
+      .price-pin:hover { transform: scale(1.08); z-index: 1000 !important; }
+
+      @keyframes cardIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 1024px) {
+        body { overflow: auto; }
+        .content { flex-direction: column; }
+        .radar { width: 100%; max-height: 360px; border-left: none; border-top: 1px solid var(--border); }
+        .card { bottom: 12px; }
+      }
+
+      @media (max-width: 640px) {
+        .topbar { padding: 12px 14px; }
+        .toolbar { width: 100%; justify-content: flex-start; }
+        .legend { top: 10px; right: 10px; }
+        .card { left: 10px; bottom: 10px; width: calc(100% - 20px); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-title">Radar Inmobiliario · Galicia</div>
+          <div class="brand-subtitle">Mapa interactivo · detección de anuncios nuevos</div>
+        </div>
+        <div class="toolbar">
+          <div id="filters"></div>
+          <button id="run-vigilante" class="vigilante-btn" type="button">Ejecutar vigilante ahora</button>
+          <div class="count-pill" id="count-pill">0 propiedades</div>
+        </div>
+        <div id="vigilante-status" class="status-note" style="width:100%;text-align:right;">Listo para revisar novedades.</div>
+      </header>
+
+      <main class="content">
+        <section class="map-panel">
+          <div id="map"></div>
+
+          <div class="legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#12332e"></span> Venta</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#1e6fb8"></span> Alquiler</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#c2572a"></span> Sara Álvarez</div>
+            <label class="toggle">
+              <button id="toggle-pins" type="button">Mostrar precio</button>
+              <span id="toggle-label">Pines con precio</span>
+            </label>
+          </div>
+
+          <div id="property-card"></div>
+        </section>
+
+        <aside id="radar" class="radar">
+          <div class="radar-header">
+            <div class="radar-title"><span class="radar-dot"></span> Radar de captación</div>
+            <div class="radar-subtitle">Anuncios de particulares recientes — para llamar y captar</div>
+          </div>
+          <div id="radar-list" class="radar-list"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./app.js"></script>
+    <!--
+    <script>
+      const TYPE_META = {
+        venta: { label: 'Venta', color: '#12332e' },
+        alquiler: { label: 'Alquiler', color: '#1e6fb8' },
+        agencia: { label: 'Sara Álvarez', color: '#c2572a' }
+      };
+
+      const SOURCE_COLORS = {
+        'Idealista': '#b8c400',
+        'Fotocasa': '#0046fe',
+        'Wallapop': '#13c1ac',
+        'Milanuncios': '#f0524c',
+        'Sara Álvarez Inmobiliaria': '#c2572a',
+        'Inmobiliaria Freire': '#7a2b3a'
+      };
+
+      const AGENCIA = [
+        { id: 101, type: 'agencia', price: 390000, lat: 42.5560, lng: -8.5850, title: 'Terreno con dos estupendas casas en Moraña', address: 'Moraña', specs: '5 hab · 2 baños · 400 m²', ptype: 'Casa + terreno', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Moraña/34313', owner: 'Agencia', daysAgo: 2 },
+        { id: 102, type: 'agencia', price: 235000, lat: 42.4280, lng: -8.6410, title: 'Piso de 2 hab. con terraza, garaje y dos trasteros — zona Colegio Sagrado Corazón', address: 'Sagrado Corazón, Pontevedra', specs: '2 hab · 1 baño · 80 m²', ptype: 'Piso', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/piso/Pontevedra/Pontevedra/170811', owner: 'Agencia', daysAgo: 4 },
+        { id: 103, type: 'agencia', price: 395000, lat: 42.4000, lng: -8.8070, title: 'Luminoso piso con terraza próximo a la playa de Silgar', address: 'Calle Progreso, Sanxenxo', specs: '2 hab · 2 baños · 125 m²', ptype: 'Piso', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/piso/Pontevedra/Sanxenxo/170385', owner: 'Agencia', daysAgo: 6 },
+        { id: 104, type: 'agencia', price: 595000, lat: 42.4350, lng: -8.6150, title: 'Impresionante casa de piedra en Mourente, zona Liceo Casino Mercantil', address: 'Mourente, Pontevedra', specs: '4 hab · 4 baños · 369 m²', ptype: 'Casa', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Pontevedra/44159', owner: 'Agencia', daysAgo: 8 },
+        { id: 105, type: 'agencia', price: 340000, lat: 42.3910, lng: -8.7020, title: 'Estupenda casa en entorno privilegiado con vistas al mar', address: 'Marín', specs: '4 hab · 2 baños · 160 m²', ptype: 'Casa', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Marín/37740', owner: 'Agencia', daysAgo: 10 },
+        { id: 106, type: 'agencia', price: 430000, lat: 42.4400, lng: -8.6100, title: 'Terreno con proyecto de casa de diseño moderno de una planta', address: 'Mourente, Pontevedra', specs: '3 hab · 2 baños · 230 m²', ptype: 'Terreno + proyecto', orient: 'Consultar', source: 'Sara Álvarez Inmobiliaria', url: 'https://www.saraalvarezinmobiliaria.com/comprar/casa/Pontevedra/Pontevedra/33804', owner: 'Agencia', daysAgo: 3 }
+      ];
+
+      const FREIRE = [
+        { id: 201, type: 'venta', price: null, lat: 42.3110, lng: -8.7880, title: 'Casa rústica de piedra en la aldea de Meiro', address: 'Meiro, Bueu', specs: 'Entorno natural · piedra', ptype: 'Casa rústica', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 1 },
+        { id: 202, type: 'venta', price: null, lat: 42.3050, lng: -8.7750, title: 'Vivienda tradicional gallega para reformar en A Graña', address: 'A Graña, Bueu', specs: '118 m² · parcela 712 m²', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 5 },
+        { id: 203, type: 'venta', price: null, lat: 42.3180, lng: -8.7950, title: 'Conjunto de seis cabañas equipadas — uso turístico', address: 'As Meanes, Bueu', specs: '6 cabañas · cerca de playa', ptype: 'Cabañas', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 7 },
+        { id: 204, type: 'venta', price: null, lat: 42.3240, lng: -8.7850, title: 'Casa con terreno en el centro de Bueu, 2 plantas + bajo cubierta', address: 'Centro, Bueu', specs: '3 hab · garaje', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 9 },
+        { id: 205, type: 'venta', price: null, lat: 42.3210, lng: -8.8220, title: 'Finca de 12.900 m² con casa para reformar y hórreo — parcelable', address: 'Montemogos, Beluso', specs: '12.900 m² · a 1 km de playas', ptype: 'Finca + casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 11 },
+        { id: 206, type: 'venta', price: null, lat: 42.3390, lng: -8.8270, title: 'Casa para restaurar en Bon de Abaixo', address: 'Bon de Abaixo, Beluso', specs: '2 hab · salita · cocina', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 12 },
+        { id: 207, type: 'venta', price: null, lat: 42.3265, lng: -8.7835, title: 'Casa de 3 plantas en la Banda do Río', address: 'Banda do Río, Bueu', specs: '3 hab · bodega · terraza', ptype: 'Casa', orient: 'Consultar', source: 'Inmobiliaria Freire', url: 'https://www.freireinmobiliaria.com', owner: 'Agencia', daysAgo: 13 }
+      ];
+
+      function buildDemoData() {
+        const zones = [
+          { name: 'Vigo', lat: 42.2328, lng: -8.7226, n: 18, streets: ['Rúa do Príncipe', 'Gran Vía', 'Rúa Urzáiz', 'Bouzas', 'Casco Vello', 'Teis', 'Coia', 'As Travesas', 'O Calvario'] },
+          { name: 'Pontevedra', lat: 42.4318, lng: -8.6446, n: 22, spread: 0.011, streets: ['A Ferrería', 'Casco histórico', 'Rúa Benito Corbal', 'Rúa Michelena', 'Praza da Peregrina', 'Rúa da Oliva', 'Rúa Gutiérrez Mellado', 'Praza de Galicia', 'Rúa Sagasta', 'Alameda'] },
+          { name: 'A Caeira, Poio', lat: 42.4345, lng: -8.6585, n: 6, spread: 0.008, streets: ['A Caeira', 'Urbanización A Caeira', 'Camiño da Caeira'] },
+          { name: 'Marcón', lat: 42.4180, lng: -8.6050, n: 3, spread: 0.012, streets: ['Marcón', 'A Bouza', 'San Miguel'] },
+          { name: 'Bora', lat: 42.4370, lng: -8.5850, n: 3, spread: 0.012, streets: ['Bora', 'A Igrexa', 'O Pino'] },
+          { name: 'Xeve', lat: 42.4750, lng: -8.6150, n: 3, spread: 0.014, streets: ['Xeve', 'Santa María', 'A Devesa'] },
+          { name: 'Sanxenxo', lat: 42.4790, lng: -8.8570, n: 8, streets: ['Calle Progreso', 'Praia de Silgar', 'Portonovo', 'Vilalonga', 'Adina'] },
+          { name: 'Marín', lat: 42.3910, lng: -8.7020, n: 6, streets: ['Cantodarea', 'O Sequelo', 'Praza de España', 'A Estrada Vella'] },
+          { name: 'Poio', lat: 42.4650, lng: -8.7270, n: 6, streets: ['Combarro', 'Campelo', 'San Salvador', 'A Seca'] },
+          { name: 'Bueu', lat: 42.3240, lng: -8.7850, n: 5, spread: 0.012, streets: ['Rúa Montero Ríos', 'Rúa Eduardo Vincenti', 'A Banda do Río', 'As Lagoas', 'Praia de Agrelo'] },
+          { name: 'Beluso', lat: 42.3300, lng: -8.8150, n: 3, spread: 0.012, streets: ['Beluso', 'Bon', 'Praia de Lagos'] },
+          { name: 'Cela, Bueu', lat: 42.3180, lng: -8.7620, n: 3, spread: 0.012, streets: ['Cela', 'A Portela', 'O Valado'] }
+        ];
+        const ptypes = ['Piso', 'Piso', 'Apartamento', 'Casa', 'Chalet', 'Adosado', 'Ático', 'Estudio'];
+        const orients = ['Sur', 'Norte', 'Este', 'Oeste', 'Sureste', 'Suroeste', 'Noreste'];
+        const sources = ['Idealista', 'Idealista', 'Fotocasa', 'Wallapop', 'Milanuncios'];
+        const adjs = ['Luminoso', 'Reformado', 'Amplio', 'Céntrico', 'Acogedor', 'Exterior', 'Con terraza', 'Con garaje', 'Para entrar a vivir'];
+        let seed = 7;
+        const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+        const out = [];
+        let id = 1000;
+        zones.forEach(z => {
+          for (let i = 0; i < z.n; i++) {
+            const rent = rnd() < 0.3;
+            const ptype = ptypes[Math.floor(rnd() * ptypes.length)];
+            const hab = ptype === 'Estudio' ? 1 : 1 + Math.floor(rnd() * 4);
+            const m2 = 45 + Math.floor(rnd() * 180);
+            const price = rent ? 450 + Math.floor(rnd() * 14) * 50 : 90000 + Math.floor(rnd() * 90) * 5000;
+            const src = sources[Math.floor(rnd() * sources.length)];
+            const street = z.streets[Math.floor(rnd() * z.streets.length)];
+            const adj = adjs[Math.floor(rnd() * adjs.length)];
+            out.push({
+              owner: rnd() < 0.35 ? 'Particular' : 'Agencia',
+              daysAgo: Math.floor(rnd() * 14),
+              id: ++id,
+              type: rent ? 'alquiler' : 'venta',
+              price,
+              lat: z.lat + (rnd() - 0.5) * (z.spread ?? 0.045),
+              lng: z.lng + (rnd() - 0.5) * ((z.spread ?? 0.045) * 1.33),
+              title: adj + ' ' + ptype.toLowerCase() + ' de ' + hab + (hab === 1 ? ' habitación' : ' habitaciones'),
+              address: street + ', ' + z.name,
+              specs: hab + ' hab · ' + m2 + ' m²',
+              ptype,
+              orient: orients[Math.floor(rnd() * orients.length)],
+              source: src,
+              url: 'https://example.com/anuncio/' + id
+            });
+          }
+        });
+        return out;
+      }
+
+      const properties = [...AGENCIA, ...FREIRE, ...buildDemoData()];
+      const state = {
+        filter: 'todos',
+        selectedId: null,
+        showPricePins: true
+      };
+
+      const filtersEl = document.getElementById('filters');
+      const countEl = document.getElementById('count-pill');
+      const propertyCardEl = document.getElementById('property-card');
+      const radarListEl = document.getElementById('radar-list');
+      const togglePinsButton = document.getElementById('toggle-pins');
+      const toggleLabel = document.getElementById('toggle-label');
+
+      let map;
+      let markerLayer;
+
+      function formatPrice(item) {
+        if (item.price == null) return 'Consultar';
+        if (item.type === 'alquiler') return `${item.price} €/mes`;
+        return `${item.price.toLocaleString('es-ES')} €`;
+      }
+
+      function getFilteredProperties() {
+        if (state.filter === 'todos') return properties;
+        return properties.filter(p => p.type === state.filter);
+      }
+
+      function renderFilters() {
+        const filters = [
+          { key: 'todos', label: 'Todos' },
+          { key: 'venta', label: 'Venta' },
+          { key: 'alquiler', label: 'Alquiler' },
+          { key: 'agencia', label: 'Sara Álvarez' }
+        ];
+
+        filtersEl.innerHTML = filters.map(filter => {
+          const active = state.filter === filter.key;
+          return `<button class="filter-pill ${active ? 'active' : ''}" data-filter="${filter.key}">${filter.label}</button>`;
+        }).join('');
+
+        filtersEl.querySelectorAll('button').forEach(button => {
+          button.addEventListener('click', () => {
+            state.filter = button.dataset.filter;
+            state.selectedId = null;
+            render();
+          });
+        });
+      }
+
+      function renderCount() {
+        countEl.textContent = `${getFilteredProperties().length} propiedades`;
+      }
+
+      function renderPropertyCard() {
+        const selected = properties.find(p => p.id === state.selectedId);
+        if (!selected) {
+          propertyCardEl.innerHTML = '';
+          return;
+        }
+
+        const typeMeta = TYPE_META[selected.type] || TYPE_META.venta;
+        const sourceColor = SOURCE_COLORS[selected.source] || '#888';
+        propertyCardEl.innerHTML = `
+          <div class="card">
+            <div class="card-image" style="background-image:url('https://picsum.photos/seed/galicia${selected.id}/640/400')">
+              <button class="close-btn" type="button" aria-label="Cerrar ficha">✕</button>
+              <div class="card-badge" style="background:${typeMeta.color}">${typeMeta.label}</div>
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <div class="price">${formatPrice(selected)}</div>
+                <div class="specs">${selected.specs}</div>
+              </div>
+              <div class="title">${selected.title}</div>
+              <div class="address">${selected.address}</div>
+              <div class="chips">
+                <span class="chip">🏠 ${selected.ptype}</span>
+                <span class="chip">🧭 Orientación: ${selected.orient}</span>
+              </div>
+              <a class="external-link" href="${selected.url}" target="_blank" rel="noopener noreferrer">
+                <span class="source-pill"><span class="source-dot" style="background:${sourceColor}"></span> Ver en ${selected.source}</span>
+                <span>→</span>
+              </a>
+            </div>
+          </div>`;
+
+        propertyCardEl.querySelector('.close-btn').addEventListener('click', () => {
+          state.selectedId = null;
+          render();
+        });
+      }
+
+      function renderRadar() {
+        const radarItems = properties
+          .filter(p => p.owner === 'Particular')
+          .sort((a, b) => a.daysAgo - b.daysAgo)
+          .slice(0, 15);
+
+        radarListEl.innerHTML = radarItems.map(item => `
+          <button class="radar-item ${item.id === state.selectedId ? 'active' : ''}" data-id="${item.id}" type="button">
+            <div class="radar-meta">
+              <span class="radar-when">${item.daysAgo === 0 ? 'Nuevo hoy' : item.daysAgo === 1 ? 'Ayer' : `Hace ${item.daysAgo} días`}</span>
+              <span class="radar-source">${item.source}</span>
+            </div>
+            <div class="radar-title-text">${item.title}</div>
+            <div class="radar-meta">
+              <span class="radar-address">${item.address}</span>
+              <span class="radar-price">${formatPrice(item)}</span>
+            </div>
+          </button>
+        `).join('');
+
+        radarListEl.querySelectorAll('.radar-item').forEach(button => {
+          button.addEventListener('click', () => {
+            state.selectedId = Number(button.dataset.id);
+            const selected = properties.find(p => p.id === state.selectedId);
+            if (selected && map) {
+              map.setView([selected.lat, selected.lng], 13, { animate: true });
+            }
+            render();
+          });
+        });
+      }
+
+      function createMarkerIcon(item) {
+        const selected = item.id === state.selectedId;
+        const baseColor = item.type === 'agencia' ? TYPE_META.agencia.color : TYPE_META[item.type]?.color || '#12332e';
+        const background = selected ? '#111' : baseColor;
+        const html = state.showPricePins
+          ? `<div class="price-pin" style="background:${background}; color:#fff; font-size:12px; font-weight:700; padding:4px 9px; border-radius:999px; white-space:nowrap;">${formatPrice(item)}</div>`
+          : `<div class="price-pin" style="width:16px;height:16px;border-radius:50%;background:${background};border:3px solid #fff;"></div>`;
+        return L.divIcon({ html, className: '', iconSize: state.showPricePins ? [60, 24] : [16, 16], iconAnchor: state.showPricePins ? [35, 13] : [11, 11] });
+      }
+
+      function renderMarkers() {
+        if (!markerLayer) return;
+        markerLayer.clearLayers();
+        getFilteredProperties().forEach(item => {
+          const marker = L.marker([item.lat, item.lng], { icon: createMarkerIcon(item) });
+          marker.on('click', () => {
+            state.selectedId = item.id;
+            if (map) {
+              map.panTo([item.lat, item.lng], { animate: true });
+            }
+            render();
+          });
+          markerLayer.addLayer(marker);
+        });
+      }
+
+      function initMap() {
+        if (!document.getElementById('map')) return;
+        map = L.map('map', { zoomControl: true }).setView([42.4318, -8.6446], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          maxZoom: 19
+        }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        renderMarkers();
+        map.invalidateSize();
+      }
+
+      function render() {
+        renderFilters();
+        renderCount();
+        renderPropertyCard();
+        renderRadar();
+        renderMarkers();
+        if (map) {
+          map.invalidateSize();
+        }
+      }
+
+      togglePinsButton.addEventListener('click', () => {
+        state.showPricePins = !state.showPricePins;
+        togglePinsButton.textContent = state.showPricePins ? 'Mostrar precio' : 'Solo color';
+        toggleLabel.textContent = state.showPricePins ? 'Pines con precio' : 'Puntos de color';
+        renderMarkers();
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        render();
+      });
+
+      window.addEventListener('resize', () => {
+        if (map) map.invalidateSize();
+      });
+    </script>
+    -->
+  </body>
+</html>
