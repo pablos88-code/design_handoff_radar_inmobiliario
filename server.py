@@ -299,8 +299,7 @@ class AppHandler(BaseHTTPRequestHandler):
             return
 
         if path in {"/", "/home.html"}:
-            home_path = ROOT / "home.html"
-            content = home_path.read_text(encoding="utf-8")
+            content = INDEX_PATH.read_text(encoding="utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(content.encode("utf-8"))))

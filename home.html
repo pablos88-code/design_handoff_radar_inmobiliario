@@ -354,34 +354,47 @@
 
     <script>
       async function loadLandingData() {
-        try {
-          const response = await fetch('./data/landing.json');
-          const data = await response.json();
-          const todayLabel = document.getElementById('today-label');
-          const totalEl = document.getElementById('total-properties');
-          const newEl = document.getElementById('new-today');
-          const particularEl = document.getElementById('particulars');
-          const zonesEl = document.getElementById('zones-count');
-          const zonesPills = document.getElementById('zones-pills');
+        const sources = ['./api/landing', './data/landing.json'];
+        let data = null;
 
-          if (todayLabel) {
-            const today = new Date().toLocaleDateString('es-ES', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long'
-            });
-            todayLabel.textContent = `RADAR ACTIVO · ${today.charAt(0).toUpperCase()}${today.slice(1)}`;
+        for (const source of sources) {
+          try {
+            const response = await fetch(source);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            data = await response.json();
+            break;
+          } catch (error) {
+            console.warn(`No se pudo cargar ${source}:`, error);
           }
+        }
 
-          if (totalEl) totalEl.textContent = data.totalProperties ?? '—';
-          if (newEl) newEl.textContent = data.newToday ?? '—';
-          if (particularEl) particularEl.textContent = data.particulars ?? '—';
-          if (zonesEl) zonesEl.textContent = data.zonesCount ?? '—';
-          if (zonesPills) {
-            zonesPills.innerHTML = (data.zones || []).map(zone => `<span class="zone-pill">${zone}</span>`).join('');
-          }
-        } catch (error) {
-          console.error('No se pudo cargar la portada', error);
+        if (!data) {
+          console.error('No se pudo cargar la portada desde ninguna fuente');
+          return;
+        }
+
+        const todayLabel = document.getElementById('today-label');
+        const totalEl = document.getElementById('total-properties');
+        const newEl = document.getElementById('new-today');
+        const particularEl = document.getElementById('particulars');
+        const zonesEl = document.getElementById('zones-count');
+        const zonesPills = document.getElementById('zones-pills');
+
+        if (todayLabel) {
+          const today = new Date().toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+          });
+          todayLabel.textContent = `RADAR ACTIVO · ${today.charAt(0).toUpperCase()}${today.slice(1)}`;
+        }
+
+        if (totalEl) totalEl.textContent = data.totalProperties ?? '—';
+        if (newEl) newEl.textContent = data.newToday ?? '—';
+        if (particularEl) particularEl.textContent = data.particulars ?? '—';
+        if (zonesEl) zonesEl.textContent = data.zonesCount ?? '—';
+        if (zonesPills) {
+          zonesPills.innerHTML = (data.zones || []).map(zone => `<span class="zone-pill">${zone}</span>`).join('');
         }
       }
 

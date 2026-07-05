@@ -19,6 +19,16 @@ def get_connection() -> sqlite3.Connection:
 
 
 def serialize_property(row: sqlite3.Row) -> dict:
+    first_seen = row['first_seen_at']
+    try:
+        first_dt = datetime.fromisoformat(first_seen.replace('Z', '+00:00'))
+    except ValueError:
+        first_dt = datetime.now(timezone.utc)
+    today = datetime.now(timezone.utc).date()
+    days_ago = max(0, (today - first_dt.date()).days)
+    if row['is_new']:
+        days_ago = 0
+
     return {
         'id': row['id'],
         'source': row['source'],
@@ -42,7 +52,7 @@ def serialize_property(row: sqlite3.Row) -> dict:
         'firstSeenAt': row['first_seen_at'],
         'lastSeenAt': row['last_seen_at'],
         'isNew': bool(row['is_new']),
-        'daysAgo': 0,
+        'daysAgo': days_ago,
     }
 
 

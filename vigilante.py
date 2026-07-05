@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from server import get_connection, insert_property, init_db, now_iso
+from scripts.sara_alvarez_scraper import fetch_sara_alvarez_ads
 
 
 def fetch_idealista_ads() -> List[Dict[str, Any]]:
@@ -81,33 +82,17 @@ def fetch_freire_ads() -> List[Dict[str, Any]]:
 
 
 def fetch_agency_ads() -> List[Dict[str, Any]]:
-    return [
-        {
-            "source": "Sara Álvarez Inmobiliaria",
-            "source_url": "https://demo.local/agencia/marin/3001",
-            "type": "venta",
-            "price": 360000.0,
-            "lat": 42.3928,
-            "lng": -8.6999,
-            "location_precision": "exact",
-            "title": "Casa con jardín en Marín",
-            "address": "Praza de España, Marín",
-            "municipality": "Marín",
-            "ptype": "Casa",
-            "rooms": 4,
-            "baths": 2,
-            "m2": 170,
-            "orientation": "Este",
-            "owner_kind": "agencia",
-            "photo_url": "https://picsum.photos/seed/agencia1/640/400",
-            "is_new": 1,
-        }
-    ]
+    try:
+        return fetch_sara_alvarez_ads()
+    except Exception as exc:
+        print(f"Failed to fetch Sara Álvarez ads: {exc}")
+        return []
 
 
 def run_vigilante() -> None:
     init_db()
     with get_connection() as conn:
+        conn.execute("DELETE FROM properties WHERE source = ?", ("Sara Álvarez Inmobiliaria",))
         candidates = []
         candidates.extend(fetch_idealista_ads())
         candidates.extend(fetch_freire_ads())
