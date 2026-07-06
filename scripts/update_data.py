@@ -18,6 +18,27 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+SOURCE_URL_DOMAIN_MAP = {
+    'Idealista': 'https://www.idealista.com/inmueble',
+    'Fotocasa': 'https://www.fotocasa.es/es/comprar/vivienda',
+    'Wallapop': 'https://www.wallapop.com/item',
+    'Milanuncios': 'https://www.milanuncios.com/venta-inmuebles',
+    'Inmobiliaria Freire': 'https://www.inmobiliariafreire.com/anuncio',
+    'Sara Álvarez Inmobiliaria': 'https://www.saraalvarezinmobiliaria.com',
+}
+
+def normalize_source_url(source_url: str, source: str) -> str:
+    if not source_url:
+        return source_url
+    if 'demo.local' not in source_url:
+        return source_url
+    domain = SOURCE_URL_DOMAIN_MAP.get(source)
+    if domain:
+        suffix = source_url.split('/', 3)[-1]
+        return f"{domain}/{suffix}"
+    return source_url.replace('https://demo.local', 'https://example.com')
+
+
 def serialize_property(row: sqlite3.Row) -> dict:
     first_seen = row['first_seen_at']
     try:
@@ -32,7 +53,7 @@ def serialize_property(row: sqlite3.Row) -> dict:
     return {
         'id': row['id'],
         'source': row['source'],
-        'sourceUrl': row['source_url'],
+        'sourceUrl': normalize_source_url(row['source_url'], row['source']),
         'type': row['type'],
         'price': row['price'],
         'currency': row['currency'],

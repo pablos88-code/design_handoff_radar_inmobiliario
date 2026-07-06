@@ -29,6 +29,8 @@
       .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; background: var(--primary); color: var(--primary-soft); flex-wrap: wrap; z-index: 1000; }
       .brand { display: flex; flex-direction: column; gap: 2px; }
       .brand-title { font-size: 17px; font-weight: 800; letter-spacing: 0.02em; }
+      .brand-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+      .brand-logo { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: var(--surface); color: var(--primary); font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.35); }
       .brand-subtitle { font-size: 12px; opacity: 0.75; }
       .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
       .filter-pill { border: 1px solid rgba(255,255,255,0.35); background: transparent; color: var(--primary-soft); padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s ease; }
@@ -71,16 +73,19 @@
       .source-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
       @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .7; } }
       @media (max-width: 1024px) { body { overflow: auto; } .content { flex-direction: column; } .radar { width: 100%; max-height: 360px; border-left: none; border-top: 1px solid var(--border); } .card { bottom: 12px; } }
-      @media (max-width: 640px) { .topbar { padding: 12px 14px; } .toolbar { width: 100%; justify-content: flex-start; } .legend { top: 10px; right: 10px; } .card { left: 10px; bottom: 10px; width: calc(100% - 20px); } }
+      @media (max-width: 640px) { .topbar { padding: 12px 14px; } .brand-link { width: 100%; } .toolbar { width: 100%; justify-content: flex-start; } .legend { top: 10px; right: 10px; } .card { left: 10px; bottom: 10px; width: calc(100% - 20px); } }
     </style>
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand">
-          <div class="brand-title">Radar Inmobiliario · Galicia</div>
-          <div class="brand-subtitle">Mapa interactivo · detección de anuncios nuevos</div>
-        </div>
+        <a class="brand-link" href="./index.html" aria-label="Volver a la portada">
+          <div class="brand-logo">SA</div>
+          <div class="brand">
+            <div class="brand-title">Radar Inmobiliario · Galicia</div>
+            <div class="brand-subtitle">Mapa interactivo · detección de anuncios nuevos</div>
+          </div>
+        </a>
         <div class="toolbar">
           <div id="filters"></div>
           <div class="count-pill" id="count-pill">0 propiedades</div>
