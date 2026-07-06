@@ -1,26 +1,19 @@
 {
-  "totalProperties": 362,
-  "newToday": 83,
-  "particulars": 99,
-  "zonesCount": 17,
+  "totalProperties": 86,
+  "newToday": 86,
+  "particulars": 2,
+  "zonesCount": 10,
   "zones": [
-    "A Caeira",
-    "Beluso",
-    "Bora",
     "Bueu",
     "Cangas",
-    "Cela",
     "Cotobade",
-    "Marcón",
     "Marín",
     "Moraña",
     "Poio",
     "Ponte Caldelas",
     "Pontevedra",
     "Sanxenxo",
-    "Soutomaior",
-    "Vigo",
-    "Xeve"
+    "Soutomaior"
   ],
-  "generatedAt": "2026-07-05T23:52:43+00:00"
+  "generatedAt": "2026-07-06T00:00:35+00:00"
 }
