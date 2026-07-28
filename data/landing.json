@@ -2,11 +2,10 @@
   "totalProperties": 90,
   "newToday": 90,
   "particulars": 2,
-  "zonesCount": 11,
+  "zonesCount": 10,
   "zones": [
     "Bueu",
     "Cangas",
-    "Cerdedo",
     "Cotobade",
     "Marín",
     "Moraña",
@@ -16,5 +15,5 @@
     "Sanxenxo",
     "Soutomaior"
   ],
-  "generatedAt": "2026-07-28T09:49:09+00:00"
+  "generatedAt": "2026-07-28T17:12:41+00:00"
 }
