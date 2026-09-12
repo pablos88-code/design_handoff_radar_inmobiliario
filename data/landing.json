@@ -1,8 +1,8 @@
 {
-  "totalProperties": 91,
-  "newToday": 91,
+  "totalProperties": 90,
+  "newToday": 90,
   "particulars": 2,
-  "zonesCount": 11,
+  "zonesCount": 10,
   "zones": [
     "Bueu",
     "Cangas",
@@ -13,8 +13,7 @@
     "Ponte Caldelas",
     "Pontevedra",
     "Sanxenxo",
-    "Soutomaior",
-    "Vigo"
+    "Soutomaior"
   ],
-  "generatedAt": "2026-09-12T02:59:47+00:00"
+  "generatedAt": "2026-09-12T10:01:48+00:00"
 }
