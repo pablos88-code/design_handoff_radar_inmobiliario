@@ -1,19 +1,12 @@
 {
-  "totalProperties": 90,
-  "newToday": 90,
+  "totalProperties": 3,
+  "newToday": 3,
   "particulars": 2,
-  "zonesCount": 10,
+  "zonesCount": 3,
   "zones": [
     "Bueu",
-    "Cangas",
-    "Cotobade",
-    "Marín",
-    "Moraña",
-    "Poio",
-    "Ponte Caldelas",
     "Pontevedra",
-    "Sanxenxo",
-    "Soutomaior"
+    "Sanxenxo"
   ],
-  "generatedAt": "2026-10-14T03:25:25+00:00"
+  "generatedAt": "2026-10-14T11:07:28+00:00"
 }
